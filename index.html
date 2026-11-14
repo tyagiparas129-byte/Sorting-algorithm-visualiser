@@ -1,0 +1,320 @@
+<title>Sorting Algorithm Visualizer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: dark title band, control strip, one wide source array, four algorithm panels racing on a copy of it, then a results table beside a time chart. */
+:root{
+  --bg:#f1f3f6; --surface:#ffffff; --ink:#1b2430; --muted:#5a6676; --line:#d8dde5;
+  --head:#2b3544; --head-ink:#f2f5f9;
+  --bar:#8d9aad; --src:#4a7ba6;
+  --cmp:#d99a1f; --swp:#d0453a;
+  --bubble:#a8603f; --selection:#7f8a2f; --insertion:#3f8a55; --quick:#5468b3;
+  --btn:#2b3544; --btn-ink:#ffffff;
+  --font-display:'Space Grotesk','Segoe UI',system-ui,sans-serif;
+  --font-body:'Inter','Segoe UI',system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11161d; --surface:#19202a; --ink:#e7ecf2; --muted:#92a0b1; --line:#2a3340;
+    --head:#202a37; --head-ink:#f2f5f9;
+    --bar:#5d6b7f; --src:#6ea0cc;
+    --cmp:#f0b84a; --swp:#ee6a5e;
+    --bubble:#d98b64; --selection:#b9c05f; --insertion:#6fb884; --quick:#8b9ce2;
+    --btn:#e7ecf2; --btn-ink:#11161d;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11161d; --surface:#19202a; --ink:#e7ecf2; --muted:#92a0b1; --line:#2a3340;
+  --head:#202a37; --head-ink:#f2f5f9;
+  --bar:#5d6b7f; --src:#6ea0cc;
+  --cmp:#f0b84a; --swp:#ee6a5e;
+  --bubble:#d98b64; --selection:#b9c05f; --insertion:#6fb884; --quick:#8b9ce2;
+  --btn:#e7ecf2; --btn-ink:#11161d;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header{background:var(--head);color:var(--head-ink);border-radius:6px;padding:14px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+header svg{flex:none}
+header h1{font:700 22px/1.1 var(--font-display);margin:0;letter-spacing:-.01em}
+header p{margin:2px 0 0;font-size:12px;opacity:.75}
+.legend{margin-left:auto;display:flex;gap:14px;font-size:12px;flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.controls{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px 16px}
+.ctl{display:flex;align-items:center;gap:10px;min-width:0}
+.ctl label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.ctl output{font-variant-numeric:tabular-nums;font-weight:600;min-width:3ch;text-align:right}
+input[type=range]{width:140px;accent-color:var(--src)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+button{font:600 13px var(--font-body);border:1px solid transparent;border-radius:5px;padding:8px 14px;cursor:pointer;background:var(--btn);color:var(--btn-ink)}
+button.alt{background:transparent;color:var(--ink);border-color:var(--line)}
+button.go{background:var(--insertion);color:#fff}
+button:disabled{opacity:.45;cursor:default}
+button:focus-visible,input:focus-visible{outline:2px solid var(--src);outline-offset:2px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px 16px;min-width:0}
+.card h2{font:600 13px var(--font-display);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px}
+canvas{display:block;width:100%}
+#src{height:130px}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;overflow:hidden;min-width:0}
+.panel h3{margin:0;padding:8px 12px;font:700 14px var(--font-display);color:#fff;display:flex;justify-content:space-between;gap:8px}
+.panel h3 small{font:500 11px var(--font-body);opacity:.85}
+.panel canvas{height:120px;margin:8px 0 0}
+.status{padding:4px 12px 8px;font-size:12px;color:var(--muted);min-height:28px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line)}
+.stats div{padding:8px 6px;text-align:center;border-right:1px solid var(--line)}
+.stats div:last-child{border-right:0}
+.stats b{display:block;font-variant-numeric:tabular-nums;font-size:16px;font-family:var(--font-display)}
+.stats span{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.results{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:12px}
+@media (max-width:760px){.results{grid-template-columns:minmax(0,1fr)}.btns{margin-left:0}}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:13px}
+th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+td .dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:8px}
+tr.best td{font-weight:600}
+.tag{font-size:10px;background:var(--insertion);color:#fff;border-radius:3px;padding:1px 5px;margin-left:6px;text-transform:uppercase;letter-spacing:.05em}
+#chart{height:230px}
+.note{font-size:12px;color:var(--muted);margin:10px 0 0}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:4px 0 8px}
+</style>
+
+<div class="wrap">
+  <header>
+    <svg width="34" height="30" viewBox="0 0 34 30" aria-hidden="true"><rect x="2" y="16" width="6" height="12" fill="#8d9aad"/><rect x="11" y="8" width="6" height="20" fill="#8d9aad"/><rect x="20" y="12" width="6" height="16" fill="#8d9aad"/><rect x="29" y="2" width="4" height="26" fill="#8d9aad"/></svg>
+    <div>
+      <h1>Sorting Algorithm Visualizer</h1>
+      <p>Four algorithms sort the same random array side by side</p>
+      <p><strong>Paras Tyagi</strong> · UID 25BDA70065 · ADS Lab Project</p>
+    </div>
+    <div class="legend" aria-label="Colour key">
+      <span><i style="background:var(--cmp)"></i>Comparing</span>
+      <span><i style="background:var(--swp)"></i>Swapping</span>
+      <span><i style="background:var(--insertion)"></i>Sorted</span>
+    </div>
+  </header>
+
+  <section class="controls" aria-label="Controls">
+    <div class="ctl"><label for="size">Array size</label><input id="size" type="range" min="10" max="150" value="50"><output id="sizeOut">50</output></div>
+    <div class="ctl"><label for="speed">Speed</label><input id="speed" type="range" min="1" max="10" value="5"><output id="speedOut">5</output></div>
+    <div class="btns">
+      <button id="gen" class="alt">Generate new array</button>
+      <button id="run" class="go">Run all algorithms</button>
+      <button id="pause" class="alt" disabled>Pause</button>
+      <button id="reset" class="alt">Reset</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Original random array</h2>
+    <canvas id="src" role="img" aria-label="Bar chart of the unsorted array"></canvas>
+  </section>
+
+  <section class="grid4" id="panels" aria-label="Algorithm panels"></section>
+
+  <section class="results">
+    <div class="card">
+      <h2>Performance comparison (same input array)</h2>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Algorithm</th><th>Time (ms)</th><th>Comparisons</th><th>Swaps</th><th>Complexity</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <p class="note">Time is the average of repeated runs of each algorithm on this array in your browser, so it varies a little between runs. Comparisons and swaps are exact counts.</p>
+    </div>
+    <div class="card">
+      <h2>Execution time comparison</h2>
+      <canvas id="chart" role="img" aria-label="Bar chart of execution time per algorithm"></canvas>
+    </div>
+  </section>
+
+  <footer>Different algorithms, different strategies, same goal: a sorted array.<br>Made by Paras Tyagi · UID 25BDA70065</footer>
+</div>
+
+<script>
+(function(){
+  var $=function(s){return document.querySelector(s)};
+  function swap(a,i,j){var t=a[i];a[i]=a[j];a[j]=t}
+
+  function* bubble(a){var n=a.length;for(var i=0;i<n-1;i++){var sw=false;for(var j=0;j<n-1-i;j++){yield{t:'c',i:j,j:j+1};if(a[j]>a[j+1]){swap(a,j,j+1);yield{t:'s',i:j,j:j+1};sw=true}}if(!sw)break}}
+  function* selection(a){var n=a.length;for(var i=0;i<n-1;i++){var m=i;for(var j=i+1;j<n;j++){yield{t:'c',i:j,j:m};if(a[j]<a[m])m=j}if(m!==i){swap(a,i,m);yield{t:'s',i:i,j:m}}}}
+  function* insertion(a){for(var i=1;i<a.length;i++){var j=i;while(j>0){yield{t:'c',i:j-1,j:j};if(a[j-1]>a[j]){swap(a,j-1,j);yield{t:'s',i:j-1,j:j};j--}else break}}}
+  function* quick(a,lo,hi){
+    if(lo===undefined){lo=0;hi=a.length-1}
+    if(lo>=hi)return;
+    var p=a[hi],i=lo;
+    for(var j=lo;j<hi;j++){yield{t:'c',i:j,j:hi};if(a[j]<p){if(i!==j){swap(a,i,j);yield{t:'s',i:i,j:j}}i++}}
+    if(i!==hi){swap(a,i,hi);yield{t:'s',i:i,j:hi}}
+    yield* quick(a,lo,i-1);yield* quick(a,i+1,hi);
+  }
+
+  var ALGS=[
+    {key:'bubble',name:'Bubble Sort',cx:'O(n²)',fn:bubble},
+    {key:'selection',name:'Selection Sort',cx:'O(n²)',fn:selection},
+    {key:'insertion',name:'Insertion Sort',cx:'O(n²)',fn:insertion},
+    {key:'quick',name:'Quick Sort',cx:'O(n log n)',fn:quick}
+  ];
+
+  var data=[],running=false,paused=false,raf=0,fresh=true;
+  var P=ALGS.map(function(a){return {alg:a,arr:[],gen:null,comps:0,swaps:0,done:false,last:null,time:null}});
+
+  /* build panels + table */
+  var panelsEl=$('#panels'),rowsEl=$('#rows');
+  P.forEach(function(p){
+    var d=document.createElement('div');d.className='panel';
+    d.innerHTML='<h3 style="background:var(--'+p.alg.key+')">'+p.alg.name+'<small>'+p.alg.cx+'</small></h3>'+
+      '<canvas aria-label="'+p.alg.name+' bars"></canvas><div class="status"></div>'+
+      '<div class="stats"><div><b data-k="c">0</b><span>Comparisons</span></div><div><b data-k="s">0</b><span>Swaps</span></div><div><b data-k="t">–</b><span>Time (ms)</span></div></div>';
+    panelsEl.appendChild(d);
+    p.el=d;p.canvas=d.querySelector('canvas');p.status=d.querySelector('.status');
+    p.cEl=d.querySelector('[data-k=c]');p.sEl=d.querySelector('[data-k=s]');p.tEl=d.querySelector('[data-k=t]');
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td><span class="dot" style="background:var(--'+p.alg.key+')"></span>'+p.alg.name+'<span class="slot"></span></td><td data-k="t">–</td><td data-k="c">–</td><td data-k="s">–</td><td>'+p.alg.cx+'</td>';
+    rowsEl.appendChild(tr);p.row=tr;
+  });
+
+  function fmtT(v){return v==null?'–':(v<1?v.toFixed(3):v.toFixed(2))}
+
+  function css(){
+    var s=getComputedStyle(document.documentElement),g=function(n){return s.getPropertyValue(n).trim()};
+    return {bar:g('--bar'),src:g('--src'),cmp:g('--cmp'),swp:g('--swp'),ink:g('--ink'),muted:g('--muted'),line:g('--line'),
+      alg:{bubble:g('--bubble'),selection:g('--selection'),insertion:g('--insertion'),quick:g('--quick')},fd:g('--font-display')||'sans-serif',fb:g('--font-body')||'sans-serif'};
+  }
+  function setup(c){
+    var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1,w=Math.max(1,Math.round(r.width)),h=Math.max(1,Math.round(r.height));
+    if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr)}
+    var x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);return {x:x,w:w,h:h};
+  }
+  function bars(c,arr,col,hi,K){
+    var o=setup(c),n=arr.length,bw=o.w/n,gap=bw>4?1:0;
+    for(var i=0;i<n;i++){
+      var h=arr[i]/100*(o.h-4);
+      o.x.fillStyle=hi&&hi.s&&(hi.s[0]===i||hi.s[1]===i)?K.swp:hi&&hi.c&&(hi.c[0]===i||hi.c[1]===i)?K.cmp:col;
+      o.x.fillRect(i*bw,o.h-h,Math.max(1,bw-gap),h);
+    }
+  }
+  function drawChart(K){
+    var o=setup($('#chart')),x=o.x,W=o.w,H=o.h,L=44,R=10,T=22,B=40;
+    var vals=P.map(function(p){return p.time}),mx=Math.max.apply(null,vals.map(function(v){return v||0}));
+    var top=1;if(mx>0){var e=Math.pow(10,Math.floor(Math.log10(mx))),m=mx/e;top=(m<=1?1:m<=2?2:m<=5?5:10)*e}
+    x.font='11px '+K.fb;x.textBaseline='middle';
+    for(var t=0;t<=4;t++){
+      var v=top*t/4,y=T+(H-T-B)*(1-t/4);
+      x.strokeStyle=K.line;x.lineWidth=1;x.beginPath();x.moveTo(L,y+.5);x.lineTo(W-R,y+.5);x.stroke();
+      x.fillStyle=K.muted;x.textAlign='right';x.fillText(v<1?v.toFixed(2):v.toFixed(1),L-6,y);
+    }
+    x.save();x.translate(11,(T+H-B)/2);x.rotate(-Math.PI/2);x.textAlign='center';x.fillStyle=K.muted;x.fillText('ms',0,0);x.restore();
+    var slot=(W-L-R)/4,bw=Math.min(54,slot*.6);
+    P.forEach(function(p,i){
+      var cx=L+slot*i+slot/2,v=p.time;
+      if(v!=null){
+        var h=(H-T-B)*(v/top);
+        x.fillStyle=K.alg[p.alg.key];x.fillRect(cx-bw/2,H-B-h,bw,h);
+        x.fillStyle=K.ink;x.textAlign='center';x.font='600 11px '+K.fb;x.fillText(fmtT(v),cx,Math.max(10,H-B-h-9));
+      }
+      x.fillStyle=K.muted;x.font='11px '+K.fb;x.textAlign='center';
+      var parts=p.alg.name.split(' ');x.fillText(parts[0],cx,H-B+14);x.fillText(parts[1],cx,H-B+28);
+    });
+  }
+
+  function render(){
+    var K=css();
+    bars($('#src'),data,K.src,null,K);
+    P.forEach(function(p){
+      var col=p.done?K.alg[p.alg.key]:K.bar;
+      var hi=null;if(p.last&&!p.done){hi={};hi[p.last.t]=[p.last.i,p.last.j]}
+      bars(p.canvas,p.arr,col,hi,K);
+    });
+    drawChart(K);
+  }
+
+  function statusText(p){
+    if(p.done)return 'Sorted';
+    if(!p.last)return fresh?'Ready':'Starting…';
+    var a=p.arr,l=p.last;
+    return (l.t==='c'?'Comparing ':'Swapped ')+a[l.i]+' and '+a[l.j]+' (positions '+(l.i+1)+', '+(l.j+1)+')';
+  }
+  function updateText(){
+    var all=true;
+    P.forEach(function(p){
+      p.cEl.textContent=p.comps;p.sEl.textContent=p.swaps;p.tEl.textContent=fmtT(p.time);
+      p.status.textContent=statusText(p);
+      p.row.querySelector('[data-k=t]').textContent=fmtT(p.time);
+      p.row.querySelector('[data-k=c]').textContent=p.done?p.comps:'–';
+      p.row.querySelector('[data-k=s]').textContent=p.done?p.swaps:'–';
+      if(!p.done)all=false;
+    });
+    var best=null;
+    P.forEach(function(p){p.row.classList.remove('best');p.row.querySelector('.slot').innerHTML=''});
+    if(all){
+      P.forEach(function(p){if(!best||p.time<best.time)best=p});
+      best.row.classList.add('best');best.row.querySelector('.slot').innerHTML='<span class="tag">Fastest</span>';
+    }
+  }
+
+  function bench(fn){
+    var reps=0,t0=performance.now(),el=0;
+    do{var a=data.slice();var it=fn(a);while(!it.next().done){}reps++;el=performance.now()-t0}while(el<14||reps<3);
+    return el/reps;
+  }
+
+  function resetPanels(){
+    cancelAnimationFrame(raf);running=false;paused=false;fresh=true;
+    P.forEach(function(p){p.arr=data.slice();p.gen=null;p.comps=0;p.swaps=0;p.done=false;p.last=null;p.time=null});
+    $('#run').disabled=false;$('#pause').disabled=true;$('#pause').textContent='Pause';
+    updateText();render();
+  }
+  function newData(){
+    var n=+$('#size').value;data=[];
+    for(var i=0;i<n;i++)data.push(5+Math.floor(Math.random()*96));
+    resetPanels();
+  }
+
+  function frame(){
+    if(!running)return;
+    if(!paused){
+      var sp=+$('#speed').value,steps=Math.round(Math.pow(2,sp-1)*0.5)||1;
+      P.forEach(function(p){
+        for(var k=0;k<steps&&!p.done;k++){
+          var r=p.gen.next();
+          if(r.done){p.done=true;p.last=null;p.time=bench(p.alg.fn);break}
+          p.last=r.value;if(r.value.t==='c')p.comps++;else p.swaps++;
+        }
+      });
+      updateText();render();
+      if(P.every(function(p){return p.done})){running=false;$('#run').disabled=false;$('#pause').disabled=true;return}
+    }
+    raf=requestAnimationFrame(frame);
+  }
+  function run(){
+    if(running)return;
+    resetPanels();fresh=false;
+    P.forEach(function(p){p.gen=p.alg.fn(p.arr)});
+    running=true;$('#run').disabled=true;$('#pause').disabled=false;
+    raf=requestAnimationFrame(frame);
+  }
+
+  $('#size').addEventListener('input',function(e){$('#sizeOut').textContent=e.target.value;newData()});
+  $('#speed').addEventListener('input',function(e){$('#speedOut').textContent=e.target.value});
+  $('#gen').addEventListener('click',newData);
+  $('#run').addEventListener('click',run);
+  $('#reset').addEventListener('click',resetPanels);
+  $('#pause').addEventListener('click',function(){
+    paused=!paused;this.textContent=paused?'Resume':'Pause';
+  });
+
+  window.addEventListener('resize',render);
+  if(window.matchMedia)window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',render);
+  new MutationObserver(render).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+  newData();
+  requestAnimationFrame(render);
+})();
+</script>
